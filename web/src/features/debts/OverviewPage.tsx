@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
-import { ChevronRight } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ChevronRight } from 'lucide-react'
+import Balance from '../../components/Balance'
 import { formatVnd } from '../../lib/format'
 import { displayName } from '../../types'
 import DebtItem from '../../components/DebtItem'
@@ -12,13 +13,19 @@ export default function OverviewPage() {
   return (
     <>
       <section className="summary">
-        <div className="card stat">
+        <div className="card stat in">
           <span className="muted small">Người khác nợ tôi</span>
-          <strong className="pos">{formatVnd(totals.owedToMe)}</strong>
+          <strong className="pos">
+            <ArrowDownLeft size={22} strokeWidth={2.5} aria-hidden />
+            {formatVnd(totals.owedToMe)}
+          </strong>
         </div>
-        <div className="card stat">
+        <div className="card stat out">
           <span className="muted small">Tôi nợ người khác</span>
-          <strong className="neg">{formatVnd(totals.iOwe)}</strong>
+          <strong className="neg">
+            <ArrowUpRight size={22} strokeWidth={2.5} aria-hidden />
+            {formatVnd(totals.iOwe)}
+          </strong>
         </div>
       </section>
 
@@ -49,7 +56,7 @@ export default function OverviewPage() {
                 <Link to={`/debts/people/${profile.id}`} className="friend">
                   <span>{displayName(profile)}</span>
                   <span className="row">
-                    <span className="neg">{formatVnd(-balance)}</span>
+                    <Balance value={balance} />
                     <ChevronRight size={18} />
                   </span>
                 </Link>

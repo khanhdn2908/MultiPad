@@ -7,6 +7,9 @@
   --muted: color-mix(in srgb, var(--fg) 55%, var(--bg));
   --faint: color-mix(in srgb, var(--fg) 6%, var(--bg));
   --cell: 14px;
+  /* Màu tiền: xanh = họ nợ mình (tiền về), đỏ = mình nợ họ (tiền đi) */
+  --pos: #2e7d4f;
+  --neg: #c0392b;
   --checker: conic-gradient(var(--fg) 0 25%, transparent 0 50%, var(--fg) 0 75%, transparent 0);
 
   color-scheme: light;
@@ -18,12 +21,16 @@
   :root:not([data-theme='light']) {
     --bg: #161616;
     --fg: #e8e6e1;
+    --pos: #6fcf97;
+    --neg: #ff7b72;
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
   --bg: #161616;
   --fg: #e8e6e1;
+  --pos: #6fcf97;
+  --neg: #ff7b72;
   color-scheme: dark;
 }
 
@@ -167,15 +174,21 @@ button.small {
 .error::before {
   content: '! ';
 }
-/* Đơn sắc: phân biệt bằng dấu +/− và gạch chân */
+/* Tiền: màu + mũi tên (↙ tiền về / ↗ tiền đi) để không chỉ dựa vào màu */
 .pos {
+  color: var(--pos);
   font-weight: 800;
 }
 .neg {
+  color: var(--neg);
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+}
+.amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .row {
@@ -247,18 +260,18 @@ button.small {
   margin-bottom: 20px;
 }
 .stat strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 1.6rem;
   font-variant-numeric: tabular-nums;
 }
-/* Ô thứ 2 đảo màu cho tương phản */
-.summary .stat:last-child {
-  background: var(--fg);
-  color: var(--bg);
+/* Dải màu trên đầu ô tổng: xanh = được nợ, đỏ = đang nợ */
+.stat.in {
+  border-top: 8px solid var(--pos);
 }
-.summary .stat:last-child .muted {
-  color: inherit;
-  opacity: 0.7;
+.stat.out {
+  border-top: 8px solid var(--neg);
 }
 
 a {
@@ -532,6 +545,38 @@ button.ghost {
 }
 .debt strong {
   font-variant-numeric: tabular-nums;
+}
+/* Vạch màu bên trái mỗi khoản: xanh = họ nợ mình, đỏ = mình nợ họ */
+.debt.in,
+.debt.out {
+  border-left: 5px solid;
+  padding-left: 10px;
+}
+.debt.in {
+  border-left-color: var(--pos);
+}
+.debt.out {
+  border-left-color: var(--neg);
+}
+.debt-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dir-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  color: var(--bg);
+}
+.dir-icon.in {
+  background: var(--pos);
+}
+.dir-icon.out {
+  background: var(--neg);
 }
 .debt.done {
   opacity: 0.55;

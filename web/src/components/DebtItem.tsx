@@ -1,3 +1,4 @@
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { formatDate, formatVnd } from '../lib/format'
 import { counterparty, displayName, type Debt } from '../types'
 
@@ -35,11 +36,20 @@ export default function DebtItem({
             : null
 
   return (
-    <li className={`debt ${d.paid_at || d.status === 'rejected' ? 'done' : ''}`}>
+    <li className={`debt ${theyOweMe ? 'in' : 'out'} ${d.paid_at || d.status === 'rejected' ? 'done' : ''}`}>
       <div>
-        <div>
-          {theyOweMe ? `${other} nợ bạn ` : `Bạn nợ ${other} `}
-          <strong className={theyOweMe ? 'pos' : 'neg'}>{formatVnd(d.amount)}</strong>
+        <div className="debt-title">
+          <span
+            className={`dir-icon ${theyOweMe ? 'in' : 'out'}`}
+            title={theyOweMe ? 'Họ nợ bạn' : 'Bạn nợ họ'}
+          >
+            {theyOweMe ? <ArrowDownLeft size={16} strokeWidth={2.5} /> : <ArrowUpRight size={16} strokeWidth={2.5} />}
+          </span>
+          <span>{theyOweMe ? `${other} nợ bạn` : `Bạn nợ ${other}`}</span>
+          <strong className={theyOweMe ? 'pos' : 'neg'}>
+            {theyOweMe ? '+' : '−'}
+            {formatVnd(d.amount)}
+          </strong>
         </div>
         <div className="muted small">
           {formatDate(d.created_at)}
