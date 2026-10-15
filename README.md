@@ -85,12 +85,141 @@
 
 ## 🚀 6. KẾ HOẠCH TRIỂN KHAI MÃ NGUỒN (TECHNICAL ROADMAP)
 
-- **Vị trí thư mục dự án:** `C:\Users\ASUS\.gemini\antigravity\scratch\rich-notepad-app`
-- **Các tệp cốt lõi:**
-  - `index.html`: Cấu trúc khung giao diện, Sidebar 6 Formats, Toolbar, Workspace & Modals.
-  - `styles.css`: Design System cao cấp (Dark/Light mode, HSL Palette, Glassmorphism, VietQR Badges, Responsive Grid).
-  - `app.js`: 
-    - Engine xử lý 6 Formats.
-    - Trình sinh VietQR động & Mã hóa Link URL Hash.
-    - Bộ phân tích tin nhắn ngân hàng (Bank SMS/Notification Regex Parser).
-    - Bộ nhớ lưu trữ offline LocalStorage / IndexedDB.
+### 6.1 Tech Stack
+
+| Thành phần | Công nghệ | Vai trò |
+| :--- | :--- | :--- |
+| **Framework** | Flutter (Dart) | App Android chính |
+| **Rich Text Editor** | `flutter_quill` | Soạn thảo văn bản đa định dạng (Delta JSON) |
+| **Database** | `drift` (SQLite ORM) | Lưu trữ local, type-safe, auto-migration |
+| **VietQR** | `vietqr_gen` + `qr_flutter` | Sinh mã QR cục bộ (không cần API/server) |
+| **State Management** | `provider` | Quản lý state đơn giản, official |
+| **UI/Animation** | `flutter_animate` + `google_fonts` | Micro-animation, typography (Be Vietnam Pro) |
+| **Trang trả nợ nhóm** | Vanilla HTML/CSS/JS (1 file) | Trang web nhẹ để người nợ mở link, host GitHub Pages |
+
+### 6.2 Cấu trúc thư mục dự án
+
+```
+MultiPad/
+├── README.md
+│
+├── app/                                        # ══ Flutter Mobile App ══
+│   ├── lib/
+│   │   ├── main.dart                           # Entry point, theme, routing
+│   │   ├── app.dart                            # MaterialApp config
+│   │   │
+│   │   ├── core/                               # ── Shared utilities ──
+│   │   │   ├── theme/
+│   │   │   │   ├── app_theme.dart              # Material 3 Dark/Light theme
+│   │   │   │   └── app_colors.dart             # HSL color palette
+│   │   │   ├── database/
+│   │   │   │   └── app_database.dart           # Drift tables & singleton
+│   │   │   ├── widgets/                        # Common reusable widgets
+│   │   │   │   ├── sidebar.dart                # Navigation sidebar
+│   │   │   │   └── empty_state.dart            # Placeholder khi chưa có data
+│   │   │   ├── l10n/                           # 🌐 Đa ngôn ngữ (i18n)
+│   │   │   │   ├── app_vi.arb                  # Tiếng Việt (mặc định)
+│   │   │   │   └── app_en.arb                  # English
+│   │   │   └── utils/
+│   │   │       ├── bank_sms_parser.dart        # Regex parser SMS ngân hàng
+│   │   │       └── url_hash_encoder.dart       # Nén/giải nén data vào URL
+│   │   │
+│   │   └── features/                           # ── Feature-First modules ──
+│   │       ├── home/                           # 🏠 Màn hình chính
+│   │       │   └── presentation/
+│   │       │       ├── home_screen.dart        # Danh sách notes, FAB, search
+│   │       │       └── note_card.dart          # Card widget cho mỗi note
+│   │       │
+│   │       ├── document/                       # 📄 Rich Text Document Editor
+│   │       │   ├── data/
+│   │       │   │   ├── document_dao.dart       # Drift DAO queries
+│   │       │   │   └── document_repository.dart
+│   │       │   ├── domain/
+│   │       │   │   └── document_model.dart     # id, title, deltaJson, timestamps
+│   │       │   └── presentation/
+│   │       │       ├── document_screen.dart    # QuillEditor + toolbar
+│   │       │       └── document_toolbar.dart   # Custom toolbar buttons
+│   │       │
+│   │       └── debt/                           # 💸 Debt Ledger & VietQR
+│   │           ├── data/
+│   │           │   ├── debt_dao.dart           # Drift DAO queries
+│   │           │   └── debt_repository.dart
+│   │           ├── domain/
+│   │           │   ├── debt_ledger_model.dart  # id, title, bankInfo, totalAmount
+│   │           │   └── debtor_model.dart       # id, name, amount, status, debtCode
+│   │           └── presentation/
+│   │               ├── debt_ledger_screen.dart  # Danh sách sổ nợ
+│   │               ├── debt_detail_screen.dart  # Chi tiết + danh sách người nợ
+│   │               ├── qr_payment_screen.dart   # Hiển thị VietQR cá nhân
+│   │               ├── group_link_screen.dart   # Tạo & preview link nhóm
+│   │               └── sms_paste_dialog.dart    # Dialog dán SMS auto-clear
+│   │
+│   ├── pubspec.yaml                            # Dependencies & project config
+│   └── android/                                # Android native config
+│
+└── web/                                        # ══ Trang Trả Nợ Nhóm (Web) ══
+    ├── index.html                              # Trang chính
+    ├── style.css                               # Giao diện (dark theme, responsive)
+    └── app.js                                  # Logic:
+                                                # - Decode URL hash → hiện danh sách tên
+                                                # - Chọn tên → sinh VietQR (EMVCo)
+                                                # - Bấm "Đã chuyển" → cache vào localStorage
+                                                # - Mở lại link → hiện badge "✅ Đã thanh toán"
+```
+
+### 6.3 Cache trạng thái thanh toán trên Web (localStorage)
+
+Khi người nợ mở link trả nợ nhóm trên trình duyệt, trang `pay.html` sẽ **cache trạng thái** đã chuyển khoản vào `localStorage` của trình duyệt:
+
+```
+[Bình mở link] → [Chọn tên "Bình"] → [Quét VietQR & chuyển tiền]
+       │
+       ▼
+[Bấm nút "✅ Tôi đã chuyển khoản"]
+       │
+       ▼
+[localStorage lưu: { ledgerId, debtorName, amount, confirmedAt, expiresAt }]
+       │
+       ▼
+[Bình mở lại link lần sau] → [Trang hiện: "✅ Bạn đã thanh toán 50.000đ lúc 14:30"]
+```
+
+| Thuộc tính | Giá trị |
+| :--- | :--- |
+| **Key** | `multipad_payment_{ledgerId}_{debtorName}` |
+| **Thời hạn cache** | 7 ngày (tự xóa sau khi hết hạn) |
+| **Dung lượng** | ~200 bytes/người (localStorage hỗ trợ ~5MB) |
+| **Lưu ý** | Đây là self-confirmation từ phía người nợ. Chủ nợ vẫn xác nhận chính thức trên app Flutter. |
+
+### 6.4 Dependencies chính (pubspec.yaml)
+
+```yaml
+dependencies:
+  # Rich Text Editor
+  flutter_quill: ^11.5.1
+  # Database (SQLite ORM)
+  drift: ^2.22.0
+  sqlite3_flutter_libs: ^0.5.0
+  # QR Code
+  vietqr_gen: latest
+  qr_flutter: ^4.1.0
+  # State Management
+  provider: ^6.1.0
+  # UI & Animation
+  google_fonts: ^6.2.0
+  flutter_animate: ^4.5.0
+  # Utilities
+  uuid: ^4.5.0
+  intl: ^0.19.0
+  share_plus: ^10.0.0
+  url_launcher: ^6.3.0
+```
+
+### 6.5 Lộ trình phân pha
+
+| Phase | Nội dung | Trạng thái |
+| :--- | :--- | :--- |
+| **1a** | Init project, Drift DB, Theme, Home Screen, Document Editor (flutter_quill), Debt Ledger CRUD | 🔜 Đang chuẩn bị |
+| **1b** | VietQR generation, Bank SMS paste & parse, URL hash group link, Confetti animation | ⏳ Sau 1a |
+| **2** | 4 Formats còn lại: Table, Schedule, Kanban, Checklist | 📋 Backlog |
+| **3** | Android NotificationListenerService (auto-read bank notification), Export/Import backup | 📋 Backlog |
