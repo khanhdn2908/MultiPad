@@ -375,6 +375,9 @@ a.tile:active {
 .module-body {
   gap: 20px;
 }
+.module-body > .net {
+  margin: -8px 0 0;
+}
 /* Khoảng cách giữa các khối do gap lo, bỏ margin riêng */
 .module-body > .summary,
 .module-body > .requests {

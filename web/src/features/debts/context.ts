@@ -2,9 +2,14 @@ import { useOutletContext } from 'react-router'
 import type { DebtActions } from '../../components/DebtItem'
 import type { Debt, NewDebt, Profile } from '../../types'
 
+/** Các con số chỉ tính khoản đã chấp nhận, chưa trả. */
 export interface Person {
   profile: Profile
-  /** Dương = họ nợ mình, âm = mình nợ họ (chỉ khoản đã chấp nhận, chưa trả). */
+  /** Tổng họ nợ mình. */
+  owedToMe: number
+  /** Tổng mình nợ họ. */
+  iOwe: number
+  /** Sau bù trừ: dương = họ nợ mình, âm = mình nợ họ. */
   balance: number
   isFriend: boolean
 }

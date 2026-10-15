@@ -74,22 +74,34 @@ export default function DebtsLayout() {
   // Bạn bè + những người từng giao dịch, kèm số dư (chỉ tính khoản đã chấp nhận, chưa trả)
   const people = useMemo(() => {
     const map = new Map<string, Person>()
-    for (const p of friends) map.set(p.id, { profile: p, balance: 0, isFriend: true })
+    const blank = (profile: Profile, isFriend: boolean): Person => ({
+      profile,
+      owedToMe: 0,
+      iOwe: 0,
+      balance: 0,
+      isFriend,
+    })
+    for (const p of friends) map.set(p.id, blank(p, true))
     for (const d of debts) {
       const p = counterparty(d, me)
-      const entry = map.get(p.id) ?? { profile: p, balance: 0, isFriend: false }
-      if (d.status === 'accepted' && !d.paid_at) entry.balance += signedAmount(d, me)
+      const entry = map.get(p.id) ?? blank(p, false)
+      if (d.status === 'accepted' && !d.paid_at) {
+        if (d.creditor_id === me) entry.owedToMe += d.amount
+        else entry.iOwe += d.amount
+        entry.balance += signedAmount(d, me)
+      }
       map.set(p.id, entry)
     }
     return [...map.values()].sort((a, b) => displayName(a.profile).localeCompare(displayName(b.profile)))
   }, [debts, friends, me])
 
+  // Tổng thật từng chiều (không bù trừ), để A nợ B 100k và B nợ A 100k vẫn hiện đủ
   const totals = useMemo(() => {
     let owedToMe = 0
     let iOwe = 0
-    for (const { balance } of people) {
-      if (balance > 0) owedToMe += balance
-      else iOwe -= balance
+    for (const p of people) {
+      owedToMe += p.owedToMe
+      iOwe += p.iOwe
     }
     return { owedToMe, iOwe }
   }, [people])

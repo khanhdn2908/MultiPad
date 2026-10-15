@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router'
 import { ArrowLeft, SquarePlus, UserMinus, UserPlus } from 'lucide-react'
 import { counterparty, displayName } from '../../types'
 import Balance from '../../components/Balance'
+import PersonAmounts from '../../components/PersonAmounts'
 import DebtItem from '../../components/DebtItem'
 import PayCard from '../../components/PayCard'
 import { useDebts } from './context'
@@ -37,7 +38,13 @@ export default function PersonPage() {
       <section className="card stack">
         <h2>{displayName(person.profile)}</h2>
         <span className="muted small">{person.profile.email}</span>
-        <Balance value={person.balance} long />
+        <PersonAmounts owedToMe={person.owedToMe} iOwe={person.iOwe} />
+        {person.owedToMe > 0 && person.iOwe > 0 && (
+          <span className="small">
+            <span className="muted">Nếu bù trừ:</span>{' '}
+            {person.balance === 0 ? <b>Hoà, không ai nợ ai</b> : <Balance value={person.balance} long />}
+          </span>
+        )}
         <div className="row wrap">
           <Link to={`/debts/new?to=${person.profile.id}`} className="btn">
             <SquarePlus size={18} /> Tạo khoản nợ
@@ -60,13 +67,20 @@ export default function PersonPage() {
         </div>
       </section>
 
-      {person.balance < 0 && (
+      {person.iOwe > 0 && (
         <section className="card">
           <h2>Trả nợ</h2>
+          {person.owedToMe > 0 && (
+            <p className="small muted">
+              {displayName(person.profile)} cũng đang nợ bạn. Có thể thoả thuận bù trừ: mỗi bên bấm "Tôi đã
+              trả" / "Đã nhận tiền" ở các khoản trong lịch sử bên dưới, chỉ chuyển phần chênh lệch (sửa số
+              tiền trong QR).
+            </p>
+          )}
           <PayCard
             key={person.profile.id}
             creditor={person.profile}
-            owed={-person.balance}
+            owed={person.iOwe}
             payerName={myName}
             debts={owedToThem}
             onClaimPaid={(claim) => actions.onClaimPaid(owedToThem, claim)}

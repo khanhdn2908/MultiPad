@@ -2,17 +2,17 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { ChevronRight, UserPlus } from 'lucide-react'
 import { displayName } from '../../types'
-import Balance from '../../components/Balance'
+import PersonAmounts from '../../components/PersonAmounts'
 import { useDebts, type Person } from './context'
 
 function PersonRow({ person, onAdd }: { person: Person; onAdd?: () => void }) {
-  const { profile, balance } = person
+  const { profile, owedToMe, iOwe } = person
   return (
     <li className="person-row">
       <Link to={`/debts/people/${profile.id}`} className="friend">
         <span>{displayName(profile)}</span>
         <span className="row">
-          <Balance value={balance} />
+          <PersonAmounts owedToMe={owedToMe} iOwe={iOwe} />
           <ChevronRight size={18} />
         </span>
       </Link>
@@ -82,7 +82,7 @@ export default function PeoplePage() {
             ))}
           </ul>
         )}
-        {people.some((p) => p.balance < 0) && (
+        {people.some((p) => p.iOwe > 0) && (
           <p className="muted small">Chọn người bạn đang nợ để hiện QR trả tiền.</p>
         )}
       </section>

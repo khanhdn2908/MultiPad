@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from 'lucide-react'
 import Balance from '../../components/Balance'
+import PersonAmounts from '../../components/PersonAmounts'
 import { formatVnd } from '../../lib/format'
 import { displayName } from '../../types'
 import DebtItem from '../../components/DebtItem'
@@ -8,7 +9,9 @@ import { useDebts } from './context'
 
 export default function OverviewPage() {
   const { totals, incoming, people, actions, loading } = useDebts()
-  const owing = people.filter((p) => p.balance < 0)
+  // Ai còn khoản chưa trả (theo từng chiều, không bù trừ)
+  const open = people.filter((p) => p.owedToMe > 0 || p.iOwe > 0)
+  const net = totals.owedToMe - totals.iOwe
 
   return (
     <>
@@ -28,6 +31,12 @@ export default function OverviewPage() {
           </strong>
         </div>
       </section>
+      {(totals.owedToMe > 0 || totals.iOwe > 0) && (
+        <p className="small net">
+          <span className="muted">Nếu bù trừ hết:</span>{' '}
+          {net === 0 ? <b>Hoà, không ai nợ ai</b> : <Balance value={net} />}
+        </p>
+      )}
 
       {incoming.length > 0 ? (
         <section className="card requests">
@@ -47,16 +56,16 @@ export default function OverviewPage() {
         )
       )}
 
-      {owing.length > 0 && (
+      {open.length > 0 && (
         <section className="card">
-          <h2>Bạn đang nợ</h2>
+          <h2>Khoản chưa trả</h2>
           <ul className="list">
-            {owing.map(({ profile, balance }) => (
+            {open.map(({ profile, owedToMe, iOwe }) => (
               <li key={profile.id}>
                 <Link to={`/debts/people/${profile.id}`} className="friend">
                   <span>{displayName(profile)}</span>
                   <span className="row">
-                    <Balance value={balance} />
+                    <PersonAmounts owedToMe={owedToMe} iOwe={iOwe} />
                     <ChevronRight size={18} />
                   </span>
                 </Link>
