@@ -26,7 +26,7 @@ export interface Debt {
 }
 
 export interface NewDebt {
-  email: string
+  otherId: string
   direction: Direction
   amount: number
   note: string | null

@@ -7,11 +7,11 @@
 --   3. Người nợ quét VietQR (STK của chủ nợ trong bank_accounts) rồi báo "đã trả".
 --   4. Chủ nợ xác nhận đã nhận tiền → khoản nợ được gạch.
 
--- ⚠️ Xoá và tạo lại các bảng dữ liệu nợ → MẤT TOÀN BỘ dữ liệu trong debts / bank_accounts.
+-- ⚠️ Xoá và tạo lại các bảng dữ liệu → MẤT TOÀN BỘ dữ liệu trong debts / bank_accounts / friends.
 --    Chỉ chạy khi cài mới. profiles được giữ lại.
+drop table if exists public.friends cascade;
 drop table if exists public.bank_accounts cascade;
 drop table if exists public.debts cascade;
-drop table if exists public.friends cascade;   -- bảng của bản đầu tiên, không còn dùng
 
 -- ═════════════════════════════════════════════════════════════════════
 -- Profiles: 1 dòng cho mỗi user, tự tạo khi đăng nhập lần đầu
@@ -107,17 +107,31 @@ create table public.bank_accounts (
 );
 
 -- ═════════════════════════════════════════════════════════════════════
+-- Friends: danh sách bạn bè một chiều (chọn nhanh khi tạo khoản nợ)
+-- ═════════════════════════════════════════════════════════════════════
+
+create table public.friends (
+  owner_id    uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  friend_id   uuid not null references public.profiles (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (owner_id, friend_id),
+  check (owner_id <> friend_id)
+);
+
+-- ═════════════════════════════════════════════════════════════════════
 -- Row Level Security
 -- ═════════════════════════════════════════════════════════════════════
 
 alter table public.profiles      enable row level security;
 alter table public.debts         enable row level security;
 alter table public.bank_accounts enable row level security;
+alter table public.friends       enable row level security;
 
--- Chỉ thấy profile của mình và của những người có chung khoản nợ.
--- Tìm người mới thì dùng hàm find_user_by_email (phải biết chính xác email).
+-- Thấy profile của: chính mình, người có chung khoản nợ, người trong danh sách bạn bè.
+-- Tìm người mới thì dùng hàm add_friend_by_email (phải biết chính xác email).
 drop policy if exists "profiles: self or counterparty" on public.profiles;
-create policy "profiles: self or counterparty" on public.profiles
+drop policy if exists "profiles: self, counterparty or friend" on public.profiles;
+create policy "profiles: self, counterparty or friend" on public.profiles
   for select to authenticated
   using (
     id = (select auth.uid())
@@ -126,7 +140,31 @@ create policy "profiles: self or counterparty" on public.profiles
       where (d.creditor_id = profiles.id and d.debtor_id = (select auth.uid()))
          or (d.debtor_id = profiles.id and d.creditor_id = (select auth.uid()))
     )
+    or exists (
+      select 1 from public.friends f
+      where f.owner_id = (select auth.uid()) and f.friend_id = profiles.id
+    )
   );
+
+create policy "friends: owner reads" on public.friends
+  for select to authenticated
+  using (owner_id = (select auth.uid()));
+
+-- Thêm trực tiếp chỉ khi đã có khoản nợ chung; người lạ thì qua add_friend_by_email
+create policy "friends: add counterparty" on public.friends
+  for insert to authenticated
+  with check (
+    owner_id = (select auth.uid())
+    and exists (
+      select 1 from public.debts d
+      where (d.creditor_id = friend_id and d.debtor_id = (select auth.uid()))
+         or (d.debtor_id = friend_id and d.creditor_id = (select auth.uid()))
+    )
+  );
+
+create policy "friends: owner removes" on public.friends
+  for delete to authenticated
+  using (owner_id = (select auth.uid()));
 
 -- Chỉ sửa được profile của chính mình, và chỉ cột display_name.
 -- Email dùng để tìm người, không cho tự đổi (tránh mạo danh).
@@ -198,6 +236,33 @@ as $$
   limit 1;
 $$;
 
+-- Tìm theo email chính xác rồi thêm vào bạn bè. Không thấy → trả về rỗng.
+create or replace function public.add_friend_by_email(p_email text)
+returns setof public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.profiles;
+begin
+  select * into v from public.profiles
+  where lower(email) = lower(trim(p_email))
+    and id <> auth.uid()
+  limit 1;
+
+  if v.id is null then
+    return;
+  end if;
+
+  insert into public.friends (owner_id, friend_id)
+  values (auth.uid(), v.id)
+  on conflict do nothing;
+
+  return next v;
+end;
+$$;
+
 -- Người nhận yêu cầu chấp nhận / từ chối
 create or replace function public.respond_debt(p_id uuid, p_accept boolean)
 returns void
@@ -262,6 +327,8 @@ begin
 end;
 $$;
 
+revoke execute on function public.add_friend_by_email(text)       from public, anon;
+grant  execute on function public.add_friend_by_email(text)       to authenticated;
 revoke execute on function public.find_user_by_email(text)        from public, anon;
 revoke execute on function public.respond_debt(uuid, boolean)      from public, anon;
 revoke execute on function public.claim_debt_paid(uuid[], boolean) from public, anon;

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, SquarePlus, UserMinus, UserPlus } from 'lucide-react'
 import { counterparty, displayName } from '../../types'
 import Balance from '../../components/Balance'
 import DebtItem from '../../components/DebtItem'
@@ -9,12 +9,12 @@ import { useDebts } from './context'
 /** Chi tiết 1 người: số dư, QR trả nợ (nếu mình đang nợ), lịch sử với người đó. */
 export default function PersonPage() {
   const { id } = useParams()
-  const { me, myName, debts, people, actions, loading } = useDebts()
+  const { me, myName, debts, people, actions, loading, addFriend, removeFriend } = useDebts()
   const person = people.find((p) => p.profile.id === id)
 
   const back = (
     <Link to="/debts/people" className="back small">
-      <ArrowLeft size={16} /> Mọi người
+      <ArrowLeft size={16} /> Bạn bè
     </Link>
   )
 
@@ -34,9 +34,30 @@ export default function PersonPage() {
   return (
     <>
       {back}
-      <section className="card">
+      <section className="card stack">
         <h2>{displayName(person.profile)}</h2>
+        <span className="muted small">{person.profile.email}</span>
         <Balance value={person.balance} long />
+        <div className="row wrap">
+          <Link to={`/debts/new?to=${person.profile.id}`} className="btn">
+            <SquarePlus size={18} /> Tạo khoản nợ
+          </Link>
+          {person.isFriend ? (
+            <button
+              className="ghost danger"
+              onClick={() => {
+                if (confirm(`Xoá ${displayName(person.profile)} khỏi bạn bè? Các khoản nợ vẫn giữ nguyên.`))
+                  removeFriend(person.profile.id)
+              }}
+            >
+              <UserMinus size={16} /> Xoá bạn
+            </button>
+          ) : (
+            <button className="ghost" onClick={() => addFriend(person.profile.id)}>
+              <UserPlus size={16} /> Thêm bạn
+            </button>
+          )}
+        </div>
       </section>
 
       {person.balance < 0 && (

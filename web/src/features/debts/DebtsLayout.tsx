@@ -11,11 +11,12 @@ import type { DebtsContext, Person } from './context'
 
 const DEBT_SELECT =
   '*, creditor:profiles!debts_creditor_id_fkey(*), debtor:profiles!debts_debtor_id_fkey(*)'
+const FRIEND_SELECT = 'friend:profiles!friends_friend_id_fkey(*)'
 
 const TABS = [
   { to: '/debts', end: true, label: 'Tổng quan', icon: LayoutDashboard },
   { to: '/debts/new', label: 'Tạo', icon: SquarePlus },
-  { to: '/debts/people', label: 'Mọi người', icon: Users },
+  { to: '/debts/people', label: 'Bạn bè', icon: Users },
   { to: '/debts/history', label: 'Lịch sử', icon: History },
   { to: '/debts/bank', label: 'Ngân hàng', icon: Landmark },
 ]
@@ -25,16 +26,21 @@ export default function DebtsLayout() {
   const { session, myName } = useShell()
   const me = session.user.id
   const [debts, setDebts] = useState<Debt[]>([])
+  const [friends, setFriends] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('debts')
-      .select(DEBT_SELECT)
-      .order('created_at', { ascending: false })
-    if (error) setError(error.message)
-    else setDebts((data ?? []) as Debt[])
+    const [d, f] = await Promise.all([
+      supabase.from('debts').select(DEBT_SELECT).order('created_at', { ascending: false }),
+      supabase.from('friends').select(FRIEND_SELECT),
+    ])
+    const err = d.error ?? f.error
+    if (err) setError(err.message)
+    else {
+      setDebts((d.data ?? []) as Debt[])
+      setFriends(((f.data ?? []) as unknown as { friend: Profile }[]).map((r) => r.friend))
+    }
     setLoading(false)
   }, [])
 
@@ -65,17 +71,18 @@ export default function DebtsLayout() {
     [load],
   )
 
-  // Những người từng giao dịch + số dư (chỉ tính khoản đã chấp nhận, chưa trả)
+  // Bạn bè + những người từng giao dịch, kèm số dư (chỉ tính khoản đã chấp nhận, chưa trả)
   const people = useMemo(() => {
     const map = new Map<string, Person>()
+    for (const p of friends) map.set(p.id, { profile: p, balance: 0, isFriend: true })
     for (const d of debts) {
       const p = counterparty(d, me)
-      const entry = map.get(p.id) ?? { profile: p, balance: 0 }
+      const entry = map.get(p.id) ?? { profile: p, balance: 0, isFriend: false }
       if (d.status === 'accepted' && !d.paid_at) entry.balance += signedAmount(d, me)
       map.set(p.id, entry)
     }
     return [...map.values()].sort((a, b) => displayName(a.profile).localeCompare(displayName(b.profile)))
-  }, [debts, me])
+  }, [debts, friends, me])
 
   const totals = useMemo(() => {
     let owedToMe = 0
@@ -89,26 +96,36 @@ export default function DebtsLayout() {
 
   const incoming = useMemo(() => debts.filter((d) => needsMyAction(d, me)), [debts, me])
 
-  async function createDebt({ email, direction, amount, note }: NewDebt) {
-    const { data, error } = await supabase.rpc('find_user_by_email', { p_email: email })
-    if (error) {
-      setError(error.message)
-      return false
-    }
-    const other = (data as Profile[])[0]
-    if (!other) {
-      setError(`Không tìm thấy "${email}". Người đó cần đăng nhập MultiPad ít nhất 1 lần.`)
-      return false
-    }
+  function createDebt({ otherId, direction, amount, note }: NewDebt) {
     return run(
       supabase.from('debts').insert({
-        creditor_id: direction === 'they_owe' ? me : other.id,
-        debtor_id: direction === 'they_owe' ? other.id : me,
+        creditor_id: direction === 'they_owe' ? me : otherId,
+        debtor_id: direction === 'they_owe' ? otherId : me,
         amount,
         note,
       }),
     )
   }
+
+  async function addFriendByEmail(email: string) {
+    const { data, error } = await supabase.rpc('add_friend_by_email', { p_email: email })
+    if (error) {
+      setError(error.message)
+      return null
+    }
+    const found = (data as Profile[])[0]
+    if (!found) {
+      setError(`Không tìm thấy "${email}". Người đó cần đăng nhập MultiPad ít nhất 1 lần.`)
+      return null
+    }
+    setError(null)
+    await load()
+    return found
+  }
+
+  const addFriend = (id: string) => run(supabase.from('friends').insert({ friend_id: id }))
+  const removeFriend = (id: string) =>
+    run(supabase.from('friends').delete().eq('owner_id', me).eq('friend_id', id))
 
   const actions: DebtActions = {
     me,
@@ -127,10 +144,14 @@ export default function DebtsLayout() {
     debts,
     loading,
     people,
+    friends,
     totals,
     incoming,
     actions,
     createDebt,
+    addFriendByEmail,
+    addFriend,
+    removeFriend,
   }
 
   return (

@@ -410,6 +410,67 @@ a.tile:active {
   border: 2px solid currentColor;
 }
 
+/* Chọn người: các nút tên dạng "chip" */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 6px 12px;
+  min-height: 40px;
+}
+.chip.on {
+  background: var(--fg);
+  color: var(--bg);
+}
+.chip.add {
+  border-style: dashed;
+}
+.chip.add.on {
+  background: var(--bg);
+  color: var(--fg);
+  border-style: solid;
+}
+
+/* Link trông như nút chính */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 2px solid var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+.btn:active {
+  transform: translate(1px, 1px);
+}
+button.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.person-row > .friend {
+  flex: 1;
+  min-width: 0;
+}
+
 .back {
   display: inline-flex;
   align-items: center;
