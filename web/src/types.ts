@@ -52,3 +52,18 @@ export interface BankAccount {
   account_no: string
   account_name: string
 }
+
+export interface FriendRequest {
+  id: string
+  from_id: string
+  to_id: string
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+  from: Profile
+  to: Profile
+}
+
+export interface FriendCode {
+  code: string
+  expires_at: string
+}

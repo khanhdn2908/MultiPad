@@ -1,14 +1,16 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ChevronRight, UserPlus } from 'lucide-react'
-import { displayName } from '../../types'
+import { ChevronRight } from 'lucide-react'
+import { displayName, type FriendRequest } from '../../types'
+import { formatDate } from '../../lib/format'
 import PersonAmounts from '../../components/PersonAmounts'
+import FriendCodeCard from '../../components/FriendCodeCard'
 import { useDebts, type Person } from './context'
 
-function PersonRow({ person, onAdd }: { person: Person; onAdd?: () => void }) {
+function PersonRow({ person }: { person: Person }) {
   const { profile, owedToMe, iOwe } = person
   return (
-    <li className="person-row">
+    <li>
       <Link to={`/debts/people/${profile.id}`} className="friend">
         <span>{displayName(profile)}</span>
         <span className="row">
@@ -16,65 +18,117 @@ function PersonRow({ person, onAdd }: { person: Person; onAdd?: () => void }) {
           <ChevronRight size={18} />
         </span>
       </Link>
-      {onAdd && (
-        <button className="ghost icon" onClick={onAdd} aria-label="Thêm vào bạn bè" title="Thêm vào bạn bè">
-          <UserPlus size={18} />
-        </button>
-      )}
+    </li>
+  )
+}
+
+function RequestRow({ request, children }: { request: FriendRequest; children: ReactNode }) {
+  return (
+    <li className="debt">
+      <div>
+        <b>{displayName(request.from)}</b>
+        <div className="muted small">{formatDate(request.created_at)}</div>
+      </div>
+      <div className="row">{children}</div>
     </li>
   )
 }
 
 export default function PeoplePage() {
-  const { people, loading, addFriendByEmail, addFriend } = useDebts()
-  const [email, setEmail] = useState('')
+  const { people, loading, friendRequests, sendFriendRequest, respondFriendRequest, cancelFriendRequest } =
+    useDebts()
+  const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
-  const [added, setAdded] = useState<string | null>(null)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
 
   const friends = people.filter((p) => p.isFriend)
   const others = people.filter((p) => !p.isFriend)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!email.trim()) return
+    if (code.length !== 6) return
     setBusy(true)
-    const profile = await addFriendByEmail(email.trim())
+    const res = await sendFriendRequest(code)
     setBusy(false)
-    if (profile) {
-      setEmail('')
-      setAdded(displayName(profile))
+    if ('profile' in res) {
+      setCode('')
+      setResult({ ok: true, text: `Đã gửi lời mời tới ${displayName(res.profile)}. Chờ họ đồng ý.` })
+    } else {
+      setResult({ ok: false, text: res.error })
     }
   }
 
   return (
     <>
+      {friendRequests.incoming.length > 0 && (
+        <section className="card requests">
+          <h2>Lời mời kết bạn ({friendRequests.incoming.length})</h2>
+          <ul className="list">
+            {friendRequests.incoming.map((r) => (
+              <RequestRow key={r.id} request={r}>
+                <button onClick={() => respondFriendRequest(r.id, true)}>Đồng ý</button>
+                <button className="ghost danger" onClick={() => respondFriendRequest(r.id, false)}>
+                  Từ chối
+                </button>
+              </RequestRow>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="card">
-        <h2>Thêm bạn</h2>
+        <h2>Mã kết bạn của bạn</h2>
+        <p className="muted small">Tạo mã rồi gửi cho bạn bè. Mã có hiệu lực 5 phút.</p>
+        <FriendCodeCard />
+      </section>
+
+      <section className="card">
+        <h2>Nhập mã của bạn bè</h2>
         <form onSubmit={submit} className="row">
           <input
-            type="email"
-            required
-            placeholder="Email Google của bạn bè"
-            value={email}
+            className="code-input"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="000000"
+            aria-label="Mã kết bạn 6 số"
+            value={code}
             onChange={(e) => {
-              setEmail(e.target.value)
-              setAdded(null)
+              setCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+              setResult(null)
             }}
           />
-          <button type="submit" disabled={busy || !email.trim()}>
-            {busy ? 'Đang tìm…' : 'Thêm'}
+          <button type="submit" disabled={busy || code.length !== 6}>
+            {busy ? 'Đang gửi…' : 'Gửi lời mời'}
           </button>
         </form>
-        {added && <p className="small">Đã thêm {added} vào bạn bè.</p>}
-        <p className="muted small">Người đó cần đăng nhập MultiPad ít nhất 1 lần.</p>
+        {result && <p className={result.ok ? 'small' : 'error'}>{result.text}</p>}
       </section>
+
+      {friendRequests.outgoing.length > 0 && (
+        <section className="card">
+          <h2>Đã gửi, chờ đồng ý</h2>
+          <ul className="list">
+            {friendRequests.outgoing.map((r) => (
+              <li key={r.id} className="debt">
+                <div>
+                  <b>{displayName(r.to)}</b>
+                  <div className="muted small">{formatDate(r.created_at)}</div>
+                </div>
+                <button className="ghost danger" onClick={() => cancelFriendRequest(r.id)}>
+                  Huỷ
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Bạn bè ({friends.length})</h2>
         {loading ? (
           <p className="muted">Đang tải…</p>
         ) : friends.length === 0 ? (
-          <p className="muted">Chưa có bạn nào. Thêm bằng email ở trên.</p>
+          <p className="muted">Chưa có bạn nào. Trao đổi mã kết bạn ở trên.</p>
         ) : (
           <ul className="list">
             {friends.map((p) => (
@@ -90,10 +144,10 @@ export default function PeoplePage() {
       {others.length > 0 && (
         <section className="card">
           <h2>Từng giao dịch</h2>
-          <p className="muted small">Chưa có trong danh sách bạn bè.</p>
+          <p className="muted small">Chưa là bạn bè. Muốn kết bạn thì trao đổi mã như trên.</p>
           <ul className="list">
             {others.map((p) => (
-              <PersonRow key={p.profile.id} person={p} onAdd={() => addFriend(p.profile.id)} />
+              <PersonRow key={p.profile.id} person={p} />
             ))}
           </ul>
         </section>

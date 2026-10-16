@@ -5,13 +5,24 @@ import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import { formatVnd } from '../../lib/format'
 import { useShell } from '../../shell'
-import { counterparty, displayName, needsMyAction, signedAmount, type Debt, type NewDebt, type Profile } from '../../types'
+import {
+  counterparty,
+  displayName,
+  needsMyAction,
+  signedAmount,
+  type Debt,
+  type FriendRequest,
+  type NewDebt,
+  type Profile,
+} from '../../types'
 import type { DebtActions } from '../../components/DebtItem'
 import type { DebtsContext, Person } from './context'
 
 const DEBT_SELECT =
   '*, creditor:profiles!debts_creditor_id_fkey(*), debtor:profiles!debts_debtor_id_fkey(*)'
 const FRIEND_SELECT = 'friend:profiles!friends_friend_id_fkey(*)'
+const REQUEST_SELECT =
+  '*, from:profiles!friend_requests_from_id_fkey(*), to:profiles!friend_requests_to_id_fkey(*)'
 
 const TABS = [
   { to: '/debts', end: true, label: 'Tổng quan', icon: LayoutDashboard },
@@ -27,29 +38,37 @@ export default function DebtsLayout() {
   const me = session.user.id
   const [debts, setDebts] = useState<Debt[]>([])
   const [friends, setFriends] = useState<Profile[]>([])
+  const [requests, setRequests] = useState<FriendRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const [d, f] = await Promise.all([
+    const [d, f, r] = await Promise.all([
       supabase.from('debts').select(DEBT_SELECT).order('created_at', { ascending: false }),
       supabase.from('friends').select(FRIEND_SELECT),
+      supabase
+        .from('friend_requests')
+        .select(REQUEST_SELECT)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
     ])
-    const err = d.error ?? f.error
+    const err = d.error ?? f.error ?? r.error
     if (err) setError(err.message)
     else {
       setDebts((d.data ?? []) as Debt[])
-      setFriends(((f.data ?? []) as unknown as { friend: Profile }[]).map((r) => r.friend))
+      setFriends(((f.data ?? []) as unknown as { friend: Profile }[]).map((x) => x.friend))
+      setRequests((r.data ?? []) as FriendRequest[])
     }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     load()
-    // Tải lại khi có yêu cầu mới / bên kia chấp nhận / báo trả
+    // Tải lại khi có yêu cầu nợ / lời mời kết bạn mới, bên kia chấp nhận, báo trả…
     const channel = supabase
       .channel('debts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -119,25 +138,29 @@ export default function DebtsLayout() {
     )
   }
 
-  async function addFriendByEmail(email: string) {
-    const { data, error } = await supabase.rpc('add_friend_by_email', { p_email: email })
-    if (error) {
-      setError(error.message)
-      return null
+  const friendRequests = useMemo(
+    () => ({
+      incoming: requests.filter((r) => r.to_id === me),
+      outgoing: requests.filter((r) => r.from_id === me),
+    }),
+    [requests, me],
+  )
+
+  async function sendFriendRequest(code: string) {
+    const { data, error } = await supabase.rpc('send_friend_request', { p_code: code })
+    if (error) return { error: error.message }
+    const result = data as { error?: string; profile?: Profile }
+    if (result.profile) {
+      await load()
+      return { profile: result.profile }
     }
-    const found = (data as Profile[])[0]
-    if (!found) {
-      setError(`Không tìm thấy "${email}". Người đó cần đăng nhập MultiPad ít nhất 1 lần.`)
-      return null
-    }
-    setError(null)
-    await load()
-    return found
+    return { error: result.error ?? 'Không gửi được lời mời.' }
   }
 
-  const addFriend = (id: string) => run(supabase.from('friends').insert({ friend_id: id }))
-  const removeFriend = (id: string) =>
-    run(supabase.from('friends').delete().eq('owner_id', me).eq('friend_id', id))
+  const respondFriendRequest = (id: string, accept: boolean) =>
+    run(supabase.rpc('respond_friend_request', { p_id: id, p_accept: accept }))
+  const cancelFriendRequest = (id: string) => run(supabase.from('friend_requests').delete().eq('id', id))
+  const removeFriend = (id: string) => run(supabase.rpc('remove_friend', { p_friend_id: id }))
 
   const actions: DebtActions = {
     me,
@@ -161,8 +184,10 @@ export default function DebtsLayout() {
     incoming,
     actions,
     createDebt,
-    addFriendByEmail,
-    addFriend,
+    friendRequests,
+    sendFriendRequest,
+    respondFriendRequest,
+    cancelFriendRequest,
     removeFriend,
   }
 
@@ -174,6 +199,9 @@ export default function DebtsLayout() {
             <Icon size={20} strokeWidth={2} />
             <span>{label}</span>
             {to === '/debts' && incoming.length > 0 && <b className="count">{incoming.length}</b>}
+            {to === '/debts/people' && friendRequests.incoming.length > 0 && (
+              <b className="count">{friendRequests.incoming.length}</b>
+            )}
           </NavLink>
         ))}
       </nav>

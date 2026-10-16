@@ -1,49 +1,25 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { UserPlus } from 'lucide-react'
 import { formatNumber, parseAmount } from '../lib/format'
 import { displayName, type Direction, type NewDebt, type Profile } from '../types'
 
 interface Props {
-  /** Người có thể chọn nhanh (bạn bè). */
+  /** Người có thể chọn (bạn bè). */
   contacts: Profile[]
   /** Chọn sẵn 1 người (vd mở từ trang chi tiết người đó). */
   initialOtherId?: string
-  /** Thêm bạn mới bằng email; trả về profile hoặc null nếu không tìm thấy. */
-  onAddByEmail: (email: string) => Promise<Profile | null>
   onCreate: (input: NewDebt) => Promise<boolean>
 }
 
-export default function NewDebtForm({ contacts, initialOtherId, onAddByEmail, onCreate }: Props) {
+export default function NewDebtForm({ contacts, initialOtherId, onCreate }: Props) {
   const [otherId, setOtherId] = useState<string | null>(initialOtherId ?? null)
-  const [showEmail, setShowEmail] = useState(contacts.length === 0)
-  const [email, setEmail] = useState('')
-  const [adding, setAdding] = useState(false)
   const [direction, setDirection] = useState<Direction>('they_owe')
   const [amount, setAmount] = useState(0)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
 
   const selected = contacts.find((p) => p.id === otherId)
-
-  async function addByEmail() {
-    if (!email.trim()) return
-    setAdding(true)
-    const profile = await onAddByEmail(email.trim())
-    setAdding(false)
-    if (profile) {
-      setOtherId(profile.id)
-      setEmail('')
-      setShowEmail(false)
-    }
-  }
-
-  // Enter trong ô email = thêm bạn, không gửi cả form
-  function onEmailKey(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addByEmail()
-    }
-  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -73,29 +49,12 @@ export default function NewDebtForm({ contacts, initialOtherId, onAddByEmail, on
             {displayName(p)}
           </button>
         ))}
-        <button
-          type="button"
-          className={`chip add ${showEmail ? 'on' : ''}`}
-          onClick={() => setShowEmail((v) => !v)}
-          aria-expanded={showEmail}
-        >
-          <UserPlus size={16} /> Thêm bạn
-        </button>
+        <Link to="/debts/people" className="chip add">
+          <UserPlus size={16} /> Kết bạn
+        </Link>
       </div>
-
-      {showEmail && (
-        <div className="row">
-          <input
-            type="email"
-            placeholder="Email Google của bạn mới"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={onEmailKey}
-          />
-          <button type="button" onClick={addByEmail} disabled={adding || !email.trim()}>
-            {adding ? 'Đang tìm…' : 'Thêm'}
-          </button>
-        </div>
+      {contacts.length === 0 && (
+        <p className="muted small">Chưa có bạn bè. Bấm "Kết bạn" để trao đổi mã 6 số.</p>
       )}
 
       <div className="segmented">

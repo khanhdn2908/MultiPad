@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router'
 import type { DebtActions } from '../../components/DebtItem'
-import type { Debt, NewDebt, Profile } from '../../types'
+import type { Debt, FriendRequest, NewDebt, Profile } from '../../types'
 
 /** Các con số chỉ tính khoản đã chấp nhận, chưa trả. */
 export interface Person {
@@ -27,9 +27,13 @@ export interface DebtsContext {
   incoming: Debt[]
   actions: DebtActions
   createDebt: (input: NewDebt) => Promise<boolean>
-  /** Trả về profile vừa thêm, hoặc null nếu không tìm thấy / lỗi (lỗi đã được hiển thị). */
-  addFriendByEmail: (email: string) => Promise<Profile | null>
-  addFriend: (id: string) => Promise<boolean>
+  /** Lời mời kết bạn đang chờ: người khác gửi mình / mình gửi người khác. */
+  friendRequests: { incoming: FriendRequest[]; outgoing: FriendRequest[] }
+  /** Nhập mã 6 số của người kia để gửi lời mời. */
+  sendFriendRequest: (code: string) => Promise<{ error: string } | { profile: Profile }>
+  respondFriendRequest: (id: string, accept: boolean) => Promise<boolean>
+  cancelFriendRequest: (id: string) => Promise<boolean>
+  /** Huỷ kết bạn (cả 2 chiều). */
   removeFriend: (id: string) => Promise<boolean>
 }
 

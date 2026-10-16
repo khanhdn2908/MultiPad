@@ -4,7 +4,7 @@ import NewDebtForm from '../../components/NewDebtForm'
 import { useDebts } from './context'
 
 export default function NewDebtPage() {
-  const { friends, people, loading, createDebt, addFriendByEmail } = useDebts()
+  const { friends, people, loading, createDebt } = useDebts()
   const [params] = useSearchParams()
   const [sent, setSent] = useState(false)
 
@@ -22,7 +22,6 @@ export default function NewDebtPage() {
         <NewDebtForm
           contacts={contacts}
           initialOtherId={to}
-          onAddByEmail={addFriendByEmail}
           onCreate={async (input) => {
             const ok = await createDebt(input)
             setSent(ok)
