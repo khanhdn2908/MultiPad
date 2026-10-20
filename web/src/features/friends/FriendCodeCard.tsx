@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Copy, RefreshCw } from 'lucide-react'
-import { supabase } from '../lib/supabase'
-import type { FriendCode } from '../types'
+import { supabase } from '../../lib/supabase'
+import type { FriendCode } from '../../types'
 
 /** Mã kết bạn 6 số của mình: tạo mới, đếm ngược 5 phút, sao chép. */
 export default function FriendCodeCard() {

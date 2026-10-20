@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, SquarePlus, UserMinus } from 'lucide-react'
+import { ArrowLeft, SquarePlus } from 'lucide-react'
 import { counterparty, displayName } from '../../types'
 import Balance from '../../components/Balance'
 import PersonAmounts from '../../components/PersonAmounts'
@@ -10,12 +10,12 @@ import { useDebts } from './context'
 /** Chi tiết 1 người: số dư, QR trả nợ (nếu mình đang nợ), lịch sử với người đó. */
 export default function PersonPage() {
   const { id } = useParams()
-  const { me, myName, debts, people, actions, loading, removeFriend } = useDebts()
+  const { me, myName, debts, people, actions, loading } = useDebts()
   const person = people.find((p) => p.profile.id === id)
 
   const back = (
     <Link to="/debts/people" className="back small">
-      <ArrowLeft size={16} /> Bạn bè
+      <ArrowLeft size={16} /> Mọi người
     </Link>
   )
 
@@ -49,21 +49,10 @@ export default function PersonPage() {
           <Link to={`/debts/new?to=${person.profile.id}`} className="btn">
             <SquarePlus size={18} /> Tạo khoản nợ
           </Link>
-          {person.isFriend && (
-            <button
-              className="ghost danger"
-              onClick={() => {
-                if (confirm(`Huỷ kết bạn với ${displayName(person.profile)}? Các khoản nợ vẫn giữ nguyên.`))
-                  removeFriend(person.profile.id)
-              }}
-            >
-              <UserMinus size={16} /> Huỷ kết bạn
-            </button>
-          )}
         </div>
         {!person.isFriend && (
           <p className="muted small">
-            Chưa là bạn bè. Muốn kết bạn thì trao đổi mã 6 số ở tab <Link to="/debts/people">Bạn bè</Link>.
+            Chưa là bạn bè. Muốn kết bạn thì trao đổi mã 6 số ở <Link to="/friends">Bạn bè</Link>.
           </p>
         )}
       </section>

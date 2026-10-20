@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import type { ShellContext } from '../shell'
 import type { Profile } from '../types'
 import ThemeToggle from '../components/ThemeToggle'
+import { useFriendsData } from '../features/friends/useFriendsData'
 
 /** Khung chung: thanh trên cùng (nút về Home, hồ sơ, theme, đăng xuất) + nội dung trang. */
 export default function AppShell({ session }: { session: Session }) {
@@ -37,7 +38,8 @@ export default function AppShell({ session }: { session: Session }) {
     return null
   }
 
-  const context: ShellContext = { session, profile, myName, updateDisplayName }
+  const friends = useFriendsData(me)
+  const context: ShellContext = { session, profile, myName, updateDisplayName, friends }
 
   return (
     <div className="page">

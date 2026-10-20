@@ -5,6 +5,7 @@ import {
   ListChecks,
   SquareKanban,
   Table2,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   { label: 'Quản lý nợ', icon: Wallet, to: '/debts' },
+  { label: 'Bạn bè', icon: Users, to: '/friends' },
   { label: 'Tài liệu', icon: FileText },
   { label: 'Bảng tính', icon: Table2 },
   { label: 'Lịch trình', icon: CalendarDays },
@@ -28,7 +30,9 @@ const FEATURES: Feature[] = [
 
 /** Màn hình chính: các nút chức năng chỉ có biểu tượng. */
 export default function HomePage() {
-  const { myName } = useShell()
+  const { myName, friends } = useShell()
+  // Số việc đang chờ ở từng chức năng (hiện góc nút)
+  const badges: Record<string, number> = { '/friends': friends.incoming.length }
 
   return (
     <main>
@@ -36,8 +40,15 @@ export default function HomePage() {
       <nav className="launcher" aria-label="Chức năng">
         {FEATURES.map(({ label, icon: Icon, to }) =>
           to ? (
-            <Link key={label} to={to} className="tile" aria-label={label} title={label}>
+            <Link
+              key={label}
+              to={to}
+              className="tile"
+              aria-label={badges[to] ? `${label} (${badges[to]} mới)` : label}
+              title={label}
+            >
               <Icon size={40} strokeWidth={1.75} />
+              {badges[to] > 0 && <b className="count">{badges[to]}</b>}
             </Link>
           ) : (
             <span

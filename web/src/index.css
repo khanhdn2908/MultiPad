@@ -477,6 +477,45 @@ button.ghost {
   gap: 6px;
 }
 
+/* Số đếm ở góc nút chức năng trên Home */
+.tile {
+  position: relative;
+}
+.tile .count {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  background: var(--fg);
+  color: var(--bg);
+  border: 2px solid var(--bg);
+}
+
+/* Tiêu đề trang của chức năng không có thanh tab */
+.page-title {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* 2 khối đặt cạnh nhau, xuống dòng trên điện thoại */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Link dạng nút viền chỉ có biểu tượng */
+.btn.ghost-link {
+  background: var(--bg);
+  color: var(--fg);
+  padding: 4px 10px;
+}
+
 /* Mã kết bạn 6 số: chữ to, khung caro */
 .friend-code {
   align-self: flex-start;

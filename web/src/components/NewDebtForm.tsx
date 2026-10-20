@@ -49,7 +49,7 @@ export default function NewDebtForm({ contacts, initialOtherId, onCreate }: Prop
             {displayName(p)}
           </button>
         ))}
-        <Link to="/debts/people" className="chip add">
+        <Link to="/friends" className="chip add">
           <UserPlus size={16} /> Kết bạn
         </Link>
       </div>
