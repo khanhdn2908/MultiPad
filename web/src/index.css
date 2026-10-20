@@ -516,6 +516,145 @@ button.ghost {
   padding: 4px 10px;
 }
 
+/* ── Vòng quay ngẫu nhiên ─────────────────────────────────────────────── */
+
+.wheel-layout {
+  align-items: start;
+}
+.wheel-card {
+  align-items: center;
+}
+.wheel-button {
+  all: unset;
+  cursor: pointer;
+  width: 100%;
+  max-width: 380px;
+}
+.wheel-button:disabled {
+  cursor: default;
+}
+.wheel-button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+}
+.wheel-wrap {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+/* Mũi tên cố định ở đỉnh, chỉ xuống vòng quay */
+.wheel-pointer {
+  display: block;
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid var(--fg);
+  filter: drop-shadow(0 2px 0 var(--bg));
+}
+.wheel {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wheel.spinning {
+  transition: transform 4.5s cubic-bezier(0.15, 0.7, 0.1, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Vẫn có transition rất ngắn để transitionend chạy và hiện kết quả */
+  .wheel.spinning {
+    transition-duration: 0.01s;
+  }
+}
+.seg.dark {
+  fill: var(--fg);
+}
+.seg.light {
+  fill: var(--bg);
+}
+.seg.mid {
+  fill: var(--muted);
+}
+.seg {
+  stroke: var(--fg);
+  stroke-width: 0.8;
+}
+.seg-label {
+  font-family: inherit;
+  font-weight: 700;
+  pointer-events: none;
+}
+.seg-label.dark,
+.seg-label.mid {
+  fill: var(--bg);
+}
+.seg-label.light {
+  fill: var(--fg);
+}
+.wheel-rim {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 3;
+}
+.wheel-hub {
+  fill: var(--bg);
+  stroke: var(--fg);
+  stroke-width: 3;
+}
+
+.spin-btn {
+  width: 100%;
+  max-width: 380px;
+  font-size: 1.1rem;
+  min-height: 48px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wheel-result {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.wheel-result strong {
+  font-size: 1.6rem;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+textarea.wheel-options {
+  font: inherit;
+  width: 100%;
+  resize: vertical;
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--fg);
+}
+@media (max-width: 700px) {
+  textarea.wheel-options {
+    font-size: 16px;
+  }
+}
+
+.wheel-history {
+  margin: 0;
+  padding-left: 22px;
+}
+.wheel-history li:first-child {
+  font-weight: 700;
+}
+
 /* Mã kết bạn 6 số: chữ to, khung caro */
 .friend-code {
   align-self: flex-start;

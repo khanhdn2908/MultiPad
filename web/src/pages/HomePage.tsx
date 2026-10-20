@@ -3,6 +3,7 @@ import {
   CalendarDays,
   FileText,
   ListChecks,
+  LoaderPinwheel,
   SquareKanban,
   Table2,
   Users,
@@ -21,6 +22,7 @@ interface Feature {
 const FEATURES: Feature[] = [
   { label: 'Quản lý nợ', icon: Wallet, to: '/debts' },
   { label: 'Bạn bè', icon: Users, to: '/friends' },
+  { label: 'Vòng quay ngẫu nhiên', icon: LoaderPinwheel, to: '/wheel' },
   { label: 'Tài liệu', icon: FileText },
   { label: 'Bảng tính', icon: Table2 },
   { label: 'Lịch trình', icon: CalendarDays },

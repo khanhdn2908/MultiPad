@@ -7,6 +7,7 @@ import AppShell from './pages/AppShell'
 import HomePage from './pages/HomePage'
 import ProfilePage from './pages/ProfilePage'
 import FriendsPage from './features/friends/FriendsPage'
+import WheelPage from './features/wheel/WheelPage'
 import DebtsLayout from './features/debts/DebtsLayout'
 import OverviewPage from './features/debts/OverviewPage'
 import NewDebtPage from './features/debts/NewDebtPage'
@@ -38,6 +39,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="friends" element={<FriendsPage />} />
+          <Route path="wheel" element={<WheelPage />} />
           <Route path="debts" element={<DebtsLayout />}>
             <Route index element={<OverviewPage />} />
             <Route path="new" element={<NewDebtPage />} />
