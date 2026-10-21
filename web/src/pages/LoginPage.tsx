@@ -27,7 +27,6 @@ export default function LoginPage() {
           <h1>MultiPad</h1>
           <ThemeToggle />
         </div>
-        <p className="muted">Sổ nợ bạn bè</p>
         <button onClick={signIn} disabled={busy}>
           {busy ? 'Đang chuyển hướng…' : 'Tiếp tục với Google'}
         </button>
